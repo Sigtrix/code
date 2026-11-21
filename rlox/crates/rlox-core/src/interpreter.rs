@@ -120,6 +120,15 @@ impl Interpreter {
 
     pub fn execute(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
+            Stmt::If {condition, then_branch, else_branch} => {
+                if self.evaluate(condition)?.is_truthy() {
+                    self.execute(then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.execute(else_branch)?;
+                }
+                Ok(())
+            }
+
             Stmt::Expression(expr) => {
                 self.evaluate(expr)?;
                 Ok(())

@@ -65,6 +65,11 @@ impl fmt::Display for Expr {
 
 pub enum Stmt {
     Expression(Expr),
+    If {
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
+    },
     Print(Expr),
     Var {
         name: Token,
@@ -79,6 +84,13 @@ impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Stmt::Expression(expr) => write!(f, "{expr};"),
+            Stmt::If { condition, then_branch, else_branch } => {
+                write!(f, "if ({condition}) then {then_branch}")?;
+                if let Some(else_branch) = else_branch {
+                    write!(f, " else {else_branch}")?;
+                }
+                Ok(())
+            }
             Stmt::Print(expr) => write!(f, "print {expr};"),
             Self::Var { name, init } => {
                 match init {
