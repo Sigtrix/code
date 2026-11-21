@@ -14,6 +14,12 @@ pub enum Expr {
 
     Literal(Literal),
 
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
+
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -46,6 +52,14 @@ impl fmt::Display for Expr {
 
             Self::Literal(literal) => {
                 write!(f, "{literal}")
+            }
+
+            Self::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                write!(f, "({} {} {})", operator.lexeme, left, right)
             }
 
             Self::Unary { operator, right } => {

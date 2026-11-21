@@ -170,6 +170,24 @@ impl Interpreter {
                 self.evaluate(expression)
             }
 
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.evaluate(left)?;
+
+                if operator.token_type == TokenType::Or {
+                    if left.is_truthy() {
+                        return Ok(left);
+                    } else if !left.is_truthy() {
+                        return Ok(left);
+                    }
+                }
+
+                self.evaluate(right)
+            }
+
             Expr::Unary { operator, right } => {
                 let right = self.evaluate(right)?;
 
