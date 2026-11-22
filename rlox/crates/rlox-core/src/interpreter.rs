@@ -140,6 +140,13 @@ impl Interpreter {
                 Ok(())
             }
 
+            Stmt::While {condition, body} => {
+                while self.evaluate(condition)?.is_truthy() {
+                    self.execute(body)?;
+                }
+                Ok(())
+            }
+
             Stmt::Var {name, init} => {
                 let value = match init {
                     Some(expr) => self.evaluate(expr)?,

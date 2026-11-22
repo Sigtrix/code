@@ -89,6 +89,10 @@ pub enum Stmt {
         name: Token,
         init: Option<Expr>,
     },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
+    },
     Block {
         statements: Vec<Stmt>,
     }
@@ -112,6 +116,9 @@ impl fmt::Display for Stmt {
                     None => write!(f, "var {};", name.lexeme),
                 }
             },
+            Self::While { condition, body } => {
+                write!(f, "while ({condition}) {body}")
+            }
             Stmt::Block { statements} => {
                 write!(f, "{{ ")?;
                 for statement in statements {
