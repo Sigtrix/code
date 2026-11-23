@@ -203,9 +203,18 @@ fn parse_source(
 
     let mut parser = rlox_core::Parser::new(result.tokens);
 
-    parser
-        .parse()
-        .map_err(|error| vec![error.to_string()])
+    let (statements, errors) = parser.parse();
+
+    if !errors.is_empty() {
+        return Err(
+            errors
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+        );
+    }
+
+    Ok(statements)
 }
 
 fn print_errors(errors: &[String]) {

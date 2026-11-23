@@ -1,6 +1,6 @@
 use crate::ast::{Expr, Stmt};
+use crate::token::Literal::Bool;
 use crate::token::{Token, TokenType};
-
 
 #[derive(Debug, thiserror::Error)]
 #[error("[line {token_line}] Error at '{token_lexeme}': {message}",
@@ -25,21 +25,33 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
+    pub fn parse(&mut self) -> (Vec<Stmt>, Vec<ParseError>) {
         let mut statements = Vec::new();
+        let mut errors = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.declaration()?);
+            match self.declaration() {
+                Ok(stmt) => statements.push(stmt),
+                Err(error) => errors.push(error),
+            }
         }
 
-        Ok(statements)
+        (statements, errors)
     }
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
-        if self.match_token(&[TokenType::Var]) {
+        let result = if self.match_token(&[TokenType::Var]) {
             self.var_declaration()
         } else {
             self.statement()
+        };
+
+        match result {
+            Ok(stmt) => Ok(stmt),
+            Err(error) => {
+                self.synchronize();
+                Err(error)
+            }
         }
     }
 
@@ -56,7 +68,9 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
-        if self.match_token(&[TokenType::If]) {
+        if self.match_token(&[TokenType::For]) {
+            self.for_statement()
+        } else if self.match_token(&[TokenType::If]) {
             self.if_statement()
         } else if self.match_token(&[TokenType::Print]) {
             self.print_statement()
@@ -69,6 +83,55 @@ impl Parser {
         } else {
             self.expression_statement()
         }
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+
+        let initializer = if self.match_token(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_token(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let mut condition = None;
+        if !self.check(TokenType::Semicolon) {
+            condition = Some(self.expression()?);
+        }
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let mut increment = None;
+        if !self.check(TokenType::RightParen) {
+            increment = Some(self.expression()?);
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Stmt::Block {
+                statements: vec![
+                    body,
+                    Stmt::Expression(increment),
+                ],
+            };
+        }
+
+        let condition = condition.unwrap_or(Expr::Literal(Bool(true)));
+        body = Stmt::While { condition, body: Box::new(body) };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block {
+                statements: vec![
+                    initializer,
+                    body,
+                ]
+            }
+        }
+
+        Ok(body)
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ParseError> {
@@ -337,5 +400,29 @@ impl Parser {
             token: self.peek().clone(),
             message: String::from(msg),
         })
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::For
+                | TokenType::Fun
+                | TokenType::If
+                | TokenType::Print
+                | TokenType::Return
+                | TokenType::Var
+                | TokenType::While => return,
+                _ => {}
+            }
+
+            self.advance();
+        }
     }
 }

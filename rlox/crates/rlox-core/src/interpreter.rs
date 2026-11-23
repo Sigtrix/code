@@ -187,9 +187,9 @@ impl Interpreter {
                 if operator.token_type == TokenType::Or {
                     if left.is_truthy() {
                         return Ok(left);
-                    } else if !left.is_truthy() {
-                        return Ok(left);
                     }
+                } else if !left.is_truthy() {
+                    return Ok(left);
                 }
 
                 self.evaluate(right)
