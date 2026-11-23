@@ -120,6 +120,15 @@ impl Interpreter {
 
     pub fn execute(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
+            Stmt::If {condition, then_branch, else_branch} => {
+                if self.evaluate(condition)?.is_truthy() {
+                    self.execute(then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.execute(else_branch)?;
+                }
+                Ok(())
+            }
+
             Stmt::Expression(expr) => {
                 self.evaluate(expr)?;
                 Ok(())
@@ -128,6 +137,13 @@ impl Interpreter {
             Stmt::Print(expr) => {
                 let value = self.evaluate(expr)?;
                 println!("{value}");
+                Ok(())
+            }
+
+            Stmt::While {condition, body} => {
+                while self.evaluate(condition)?.is_truthy() {
+                    self.execute(body)?;
+                }
                 Ok(())
             }
 
@@ -159,6 +175,24 @@ impl Interpreter {
 
             Expr::Grouping(expression) => {
                 self.evaluate(expression)
+            }
+
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.evaluate(left)?;
+
+                if operator.token_type == TokenType::Or {
+                    if left.is_truthy() {
+                        return Ok(left);
+                    }
+                } else if !left.is_truthy() {
+                    return Ok(left);
+                }
+
+                self.evaluate(right)
             }
 
             Expr::Unary { operator, right } => {

@@ -14,6 +14,12 @@ pub enum Expr {
 
     Literal(Literal),
 
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
+
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -48,6 +54,14 @@ impl fmt::Display for Expr {
                 write!(f, "{literal}")
             }
 
+            Self::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                write!(f, "({} {} {})", operator.lexeme, left, right)
+            }
+
             Self::Unary { operator, right } => {
                 write!(f, "({} {})", operator.lexeme, right)
             }
@@ -65,10 +79,19 @@ impl fmt::Display for Expr {
 
 pub enum Stmt {
     Expression(Expr),
+    If {
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
+    },
     Print(Expr),
     Var {
         name: Token,
         init: Option<Expr>,
+    },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
     },
     Block {
         statements: Vec<Stmt>,
@@ -79,6 +102,13 @@ impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Stmt::Expression(expr) => write!(f, "{expr};"),
+            Stmt::If { condition, then_branch, else_branch } => {
+                write!(f, "if ({condition}) then {then_branch}")?;
+                if let Some(else_branch) = else_branch {
+                    write!(f, " else {else_branch}")?;
+                }
+                Ok(())
+            }
             Stmt::Print(expr) => write!(f, "print {expr};"),
             Self::Var { name, init } => {
                 match init {
@@ -86,6 +116,9 @@ impl fmt::Display for Stmt {
                     None => write!(f, "var {};", name.lexeme),
                 }
             },
+            Self::While { condition, body } => {
+                write!(f, "while ({condition}) {body}")
+            }
             Stmt::Block { statements} => {
                 write!(f, "{{ ")?;
                 for statement in statements {
